@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Air Quality Report</title>
+<meta name="theme-color" content="#0a1830">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a1830;          /* RAIN theme color */
+    --navy: #102446;        /* card surface */
+    --navy-line: #1c3563;   /* card border */
+    --ink: #0a1830;
+    --cyan: #33c9d1;        /* RAIN raindrop accent */
+    --cyan-deep: #149b9b;
+    --cyan-soft: #c9f5f5;
+    --muted: #9db4dd;
+    --good: #bfdbfe;
+    --moderate: #93c5fd;
+    --usg: #3b82f6;
+    --unhealthy: #2563eb;
+    --very: #1d4ed8;
+    --hazard: #1e3a8a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  html, body { min-height: 100%; }
+  body {
+    font-family: "Poppins", "Segoe UI", Arial, sans-serif;
+    min-height: 100vh;
+    color: #fff;
+    background:
+      radial-gradient(900px 420px at 85% -10%, rgba(51,201,209,.16), transparent 60%),
+      radial-gradient(700px 380px at 0% 100%, rgba(37,99,235,.16), transparent 60%),
+      var(--bg);
+    background-attachment: fixed;
+    display: flex;
+    flex-direction: column;
+  }
+  .container { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- Buttons ---------- */
+  .btn-rain {
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+    font-family: inherit; font-weight: 600; font-size: .9rem; text-decoration: none;
+    padding: 9px 20px; border-radius: 999px; border: 1px solid transparent;
+    transition: transform .15s ease, background .15s ease, color .15s ease;
+  }
+  .btn-rain:active { transform: scale(.97); }
+  .btn-rain-primary { background: var(--cyan); color: var(--ink); }
+  .btn-rain-primary:hover { background: #5fdce2; }
+  .btn-rain-outline { background: transparent; color: var(--cyan); border-color: var(--cyan); }
+  .btn-rain-outline:hover { background: rgba(51,201,209,.12); }
+
+  /* ---------- Hero ---------- */
+  .eyebrow { color: var(--cyan); font-weight: 700; font-size: .78rem; letter-spacing: .16em; text-transform: uppercase; }
+  .hero { padding: 30px 0 6px; }
+  .hero-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+  .hero-title { font-weight: 900; font-size: clamp(2.4rem, 6vw, 4rem); line-height: 1.05; letter-spacing: .01em; margin-top: 8px; }
+  .hero-subtitle { color: var(--cyan); font-weight: 600; font-size: clamp(1.05rem, 2.4vw, 1.4rem); margin-top: 6px; }
+  .weather-pill {
+    margin-top: 16px;
+    display: inline-flex; gap: 10px; align-items: center;
+    background: var(--navy); border: 1px solid var(--navy-line);
+    padding: 7px 16px; border-radius: 999px;
+    font-weight: 500; font-size: .88rem; color: #dbe6fb;
+  }
+
+  .search { display: flex; gap: 8px; position: relative; }
+  .search input {
+    padding: 10px 16px; border-radius: 999px; outline: 0;
+    font-family: inherit; font-size: .9rem; min-width: 260px;
+    background: var(--navy); color: #e8f0ff; border: 1px solid var(--navy-line);
+  }
+  .search input::placeholder { color: #8ea6d1; }
+  .search input:focus { border-color: var(--cyan); }
+  #suggestions {
+    list-style: none; position: absolute; left: 0; right: 0; top: 100%; margin-top: 6px; z-index: 10;
+    background: var(--navy); color: #e8f0ff; border: 1px solid var(--navy-line);
+    border-radius: 14px; overflow: hidden;
+    min-width: 300px; max-width: 92vw; box-shadow: 0 8px 24px rgba(0,0,0,.45);
+  }
+  #suggestions li { padding: 10px 14px; cursor: pointer; font-size: .9rem; border-bottom: 1px solid var(--navy-line); }
+  #suggestions li:last-child { border-bottom: 0; }
+  #suggestions li:hover { background: var(--navy-line); }
+
+  /* ---------- Sections ---------- */
+  .section { padding: 30px 0 10px; }
+  .section-alt { background: rgba(16,36,70,.45); border-top: 1px solid var(--navy-line); border-bottom: 1px solid var(--navy-line); margin-top: 34px; padding: 34px 0 40px; }
+  .section-heading h2 { font-weight: 800; font-size: clamp(1.4rem, 3vw, 2rem); margin-top: 4px; }
+  .section-heading h2 span { color: var(--cyan); font-weight: 600; font-size: 1rem; }
+  .section-heading p { color: var(--muted); font-size: .9rem; margin: 4px 0 18px; }
+
+  /* ---------- Reading cards ---------- */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(130px, 1fr));
+    gap: clamp(12px, 2vw, 22px);
+    width: 100%;
+  }
+  .card {
+    background: var(--navy);
+    border: 1px solid var(--navy-line);
+    border-radius: 18px;
+    padding: 20px 18px 18px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 10px;
+    min-height: 0;
+    box-shadow: 0 6px 20px rgba(0,0,0,.25);
+    transition: transform .2s ease, border-color .2s ease;
+  }
+  .card:hover { transform: translateY(-4px); border-color: var(--cyan-deep); }
+  .card-eyebrow { color: var(--muted); font-weight: 700; font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; }
+  .card-num { font-weight: 800; font-size: clamp(2.2rem, 3.4vw, 3rem); line-height: 1; color: #fff; }
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-weight: 700; font-size: .78rem; padding: 4px 12px; border-radius: 999px;
+  }
+  .status-badge .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+
+  /* ---------- Legend + source line ---------- */
+  .legend {
+    background: var(--navy); border: 1px solid var(--navy-line); border-radius: 14px;
+    padding: 10px 16px; margin-top: 22px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    width: 100%;
+  }
+  .legend b { color: #e8f0ff; font-weight: 800; letter-spacing: .06em; font-size: 1rem; margin-right: 4px; }
+  .chip {
+    flex: 1; min-width: 100px; text-align: center; font-weight: 600; font-size: .8rem;
+    padding: 4px 8px; color: #fff; border-radius: 6px;
+  }
+  .chip.good { background: var(--good); color: var(--ink); }
+  .chip.moderate { background: var(--moderate); color: var(--ink); }
+  .chip.usg { background: var(--usg); }
+  .chip.unhealthy { background: var(--unhealthy); }
+  .chip.very { background: var(--very); }
+  .chip.hazard { background: var(--hazard); }
+
+  .data-source-line { margin-top: 12px; color: var(--muted); font-size: .84rem; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .data-source-line i { color: var(--cyan); }
+
+  #status {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    z-index: 40; max-width: min(92vw, 560px); text-align: center;
+    background: var(--navy); border: 1px solid var(--navy-line); color: #e8f0ff;
+    padding: 10px 18px; border-radius: 12px; font-size: .9rem;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+  #status:empty { display: none; }
+  #status.error { background: #7f1d1d; color: #fff; font-weight: 600; }
+
+  /* ---------- Forecast ---------- */
+  .fc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 16px; min-height: 40px; }
+  .fc-card {
+    background: var(--navy); border: 1px solid var(--navy-line); border-radius: 20px;
+    padding: 18px 18px 18px; text-align: left; display: flex; flex-direction: column; gap: 10px;
+    opacity: 0;
+    animation: popIn .65s cubic-bezier(.2,.8,.2,1) forwards;
+    animation-delay: calc(.3s + var(--i, 0) * .16s);
+    transition: transform .2s ease, border-color .2s ease;
+  }
+  .fc-card:hover { transform: translateY(-4px); border-color: var(--cyan-deep); }
+  .fc-day { font-weight: 800; font-size: 1.05rem; }
+  .fc-date { color: var(--muted); font-size: .78rem; }
+  .fc-main { color: var(--muted); font-size: .78rem; }
+  .panel-sub { color: var(--muted); font-size: .85rem; }
+
+  /* ---------- Animations ---------- */
+  @keyframes popIn {
+    from { opacity: 0; transform: translateY(22px) scale(.92); }
+    to   { opacity: 1; transform: none; }
+  }
+  .card { animation: popIn .6s cubic-bezier(.2,.8,.2,1) both; animation-delay: calc(var(--i, 0) * 90ms); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card, .fc-card { animation: none; opacity: 1; }
+  }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 980px) {
+    .cards { grid-template-columns: repeat(3, minmax(110px, 1fr)); }
+  }
+  @media (max-width: 560px) {
+    .container { padding: 0 16px; }
+    .cards { grid-template-columns: repeat(2, 1fr); }
+    .search input { min-width: 0; flex: 1; }
+    .search { width: 100%; }
+    #suggestions { max-width: none; }
+  }
+</style>
+</head>
+<body>
+
+<main id="main">
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container hero-row">
+      <div>
+        <h1 class="hero-title">Air Quality</h1>
+        <div class="hero-subtitle" id="cityName">Loading…</div>
+        <span class="weather-pill" id="weatherPill" hidden></span>
+      </div>
+      <div class="search">
+        <input id="cityInput" type="text" placeholder="Search city" autocomplete="off" aria-label="Search city">
+        <button class="btn-rain btn-rain-primary" id="searchBtn">Search</button>
+        <ul id="suggestions" hidden></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CURRENT READINGS -->
+  <section class="section">
+    <div class="container">
+      <div class="section-heading">
+        <div class="eyebrow">Current readings</div>
+        <h2>Pollutant levels right now</h2>
+      </div>
+      <div class="cards" id="cards"></div>
+
+      <div class="legend">
+        <b>LEGEND:</b>
+        <span class="chip good">Good</span>
+        <span class="chip moderate">Moderate</span>
+        <span class="chip usg">Unhealthy (S.G)</span>
+        <span class="chip unhealthy">Unhealthy</span>
+        <span class="chip very">Very Unhealthy</span>
+        <span class="chip hazard">Hazardous</span>
+      </div>
+      <div class="data-source-line" id="issued"></div>
+    </div>
+  </section>
+
+  <!-- FORECAST -->
+  <section class="section section-alt" id="forecastPanel">
+    <div class="container">
+      <div class="section-heading">
+        <div class="eyebrow">Outlook</div>
+        <h2>Air Quality Forecast <span id="fcCity"></span></h2>
+        <p>Expected air quality for the coming days</p>
+      </div>
+      <div class="fc-grid" id="forecast"></div>
+    </div>
+  </section>
+</main>
+<div id="status"></div>
+
+<script>
+/* =====================================================
+   CONFIG — put your OpenWeatherMap API key here
+   ===================================================== */
+const API_KEY  = "3e137ab4558e77be4c0aa935aa190792";
+const BG_IMAGE = "";   // optional: URL of a background photo, e.g. "lake.jpg"
+
+// Default location shown on first load
+const DEFAULT_PLACE = { name: "Tanauan City", lat: 14.0859, lon: 121.1498 };
+
+const OWM = "https://api.openweathermap.org";
+
+/* ---------- Helpers ---------- */
+const $ = (id) => document.getElementById(id);
+const setStatus = (msg, err = false) => { $("status").textContent = msg; $("status").className = err ? "error" : ""; };
+
+if (BG_IMAGE) document.body.style.backgroundImage = `url("${BG_IMAGE}")`;
+
+/* ---------- AQI calculation (US EPA breakpoints) ----------
+   OpenWeatherMap returns concentrations in µg/m³, so gases are
+   converted to ppb/ppm (25 °C, 1 atm) before computing each
+   pollutant's sub-index, matching the 0-500 scale in the legend. */
+const AQI_RANGES = [[0,50],[51,100],[101,150],[151,200],[201,300],[301,500]];
+const BP = {
+  pm25: [[0,9.0],[9.1,35.4],[35.5,55.4],[55.5,125.4],[125.5,225.4],[225.5,325.4]], // µg/m³
+  pm10: [[0,54],[55,154],[155,254],[255,354],[355,424],[425,604]],                 // µg/m³
+  o3:   [[0,54],[55,70],[71,85],[86,105],[106,200],[201,404]],                     // ppb
+  co:   [[0,4.4],[4.5,9.4],[9.5,12.4],[12.5,15.4],[15.5,30.4],[30.5,50.4]],        // ppm
+  no2:  [[0,53],[54,100],[101,360],[361,649],[650,1249],[1250,2049]],              // ppb
+  so2:  [[0,35],[36,75],[76,185],[186,304],[305,604],[605,1004]]                   // ppb
+};
+const toPpb = (ug, mw) => ug * 24.45 / mw;
+
+function subIndex(key, c) {
+  const table = BP[key];
+  for (let i = 0; i < table.length; i++) {
+    const [lo, hi] = table[i];
+    if (c <= hi) {
+      const cc = Math.max(c, lo);
+      const [ilo, ihi] = AQI_RANGES[i];
+      return Math.round(((ihi - ilo) / (hi - lo)) * (cc - lo) + ilo);
+    }
+  }
+  return 500;
+}
+const levelOf = (a) => a <= 50 ? 0 : a <= 100 ? 1 : a <= 150 ? 2 : a <= 200 ? 3 : a <= 300 ? 4 : 5;
+const LEVELS = [
+  { text: "Good" },
+  { text: "Moderate" },
+  { text: "Unhealthy (S.G)" },
+  { text: "Unhealthy" },
+  { text: "Very Unhealthy" },
+  { text: "Hazardous" }
+];
+
+const POLLUTANTS = [
+  { key: "o3",   label: "OZONE", comp: "o3",    unit: "µg/m³", calc: (c) => subIndex("o3",  toPpb(c, 48.00)) },
+  { key: "co",   label: "CO",    comp: "co",    unit: "µg/m³", calc: (c) => subIndex("co",  toPpb(c, 28.01) / 1000) },
+  { key: "no2",  label: "NO2",   comp: "no2",   unit: "µg/m³", calc: (c) => subIndex("no2", toPpb(c, 46.01)) },
+  { key: "pm25", label: "PM2.5", comp: "pm2_5", unit: "µg/m³", calc: (c) => subIndex("pm25", c) },
+  { key: "pm10", label: "PM10",  comp: "pm10",  unit: "µg/m³", calc: (c) => subIndex("pm10", c) },
+  { key: "so2",  label: "SO2",   comp: "so2",   unit: "µg/m³", calc: (c) => subIndex("so2", toPpb(c, 64.06)) }
+];
+
+const LEVEL_COLORS = ["#bfdbfe", "#93c5fd", "#3b82f6", "#2563eb", "#1d4ed8", "#1e3a8a"];
+const LEVEL_TEXT   = ["#0a1830", "#0a1830", "#ffffff", "#ffffff", "#ffffff", "#ffffff"];
+
+// Overall AQI = the highest pollutant sub-index (US EPA convention)
+const overallAQI = (c) => Math.max(...POLLUTANTS.map(p => p.calc(c[p.comp] ?? 0)));
+const esc = (s) => String(s).replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+
+/* ---------- API ---------- */
+async function getJSON(url) {
+  let res;
+  try {
+    res = await fetch(url);
+  } catch (e) {
+    throw new Error("Can't reach OpenWeatherMap. Open index.html in a normal browser tab (Chrome, Edge, Firefox), not a preview window, check your internet, and turn off ad-blockers for this page.");
+  }
+  if (res.status === 401) throw new Error("Invalid or not-yet-active API key. New OpenWeatherMap keys can take up to a couple of hours to activate.");
+  if (!res.ok) throw new Error(`Request failed (${res.status})`);
+  return res.json();
+}
+
+let placeToken = 0;
+async function loadPlace(place, userAction = false) {
+  if (!API_KEY || API_KEY.startsWith("YOUR_")) {
+    setStatus("Add your OpenWeatherMap API key to the API_KEY constant in index.html.", true);
+    renderEmpty(place.name);
+    return;
+  }
+  const token = ++placeToken;
+  setStatus("Loading…");
+  $("cityName").textContent = place.name;
+  $("fcCity").textContent = "· " + place.name;
+  $("forecast").innerHTML = "";            // clear first so the pop-in animation replays
+  try {
+    const q = `lat=${place.lat}&lon=${place.lon}&appid=${API_KEY}`;
+    const [air, weather, fa] = await Promise.all([
+      getJSON(`${OWM}/data/2.5/air_pollution?${q}`),
+      getJSON(`${OWM}/data/2.5/weather?${q}&units=metric`),
+      getJSON(`${OWM}/data/2.5/air_pollution/forecast?${q}`).catch(() => null)
+    ]);
+    if (token !== placeToken) return;       // a newer city was chosen meanwhile
+    renderAir(place.name, air.list[0]);
+    renderWeather(weather);
+    if (fa && fa.list && fa.list.length) renderForecast(buildForecast(fa, weather.timezone ?? 0));
+    else $("forecast").innerHTML = '<p class="panel-sub">Air quality forecast is unavailable right now.</p>';
+    setStatus("");
+    if (userAction) setTimeout(() => $("forecastPanel").scrollIntoView({ behavior: "smooth", block: "start" }), 250);
+  } catch (e) {
+    setStatus(e.message, true);
+  }
+}
+
+/* ---------- Air quality forecast (daily worst AQI, up to ~4 days) ---------- */
+const localKey = (dt, tz) => new Date((dt + tz) * 1000).toISOString().slice(0, 10);
+
+function buildForecast(fa, tz) {
+  const days = new Map();
+  fa.list.forEach(e => {
+    const k = localKey(e.dt, tz);
+    if (!days.has(k)) days.set(k, { key: k, aqi: -1, main: "" });
+    const d = days.get(k);
+    // the day's worst hour decides the AQI, and the pollutant driving it
+    POLLUTANTS.forEach(p => {
+      const v = p.calc(e.components[p.comp] ?? 0);
+      if (v > d.aqi) { d.aqi = v; d.main = p.label; }
+    });
+  });
+  return [...days.values()].slice(0, 5);
+}
+
+function renderForecast(list) {
+  $("forecast").innerHTML = list.map((d, i) => {
+    const date = new Date(d.key + "T00:00:00Z");
+    const day = i === 0 ? "Today" : date.toLocaleDateString("en-US", { weekday: "short", timeZone: "UTC" });
+    const dstr = date.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+    const l = levelOf(d.aqi);
+    return `<div class="fc-card" style="--i:${i}">
+      <div class="card-eyebrow">${day} · ${dstr}</div>
+      <div class="card-num">${d.aqi}</div>
+      <span class="status-badge" style="background:${LEVEL_COLORS[l]};color:${LEVEL_TEXT[l]}"><span class="dot"></span>${LEVELS[l].text}</span>
+      <div class="data-source-line">Main pollutant: ${esc(d.main)}</div>
+    </div>`;
+  }).join("");
+}
+
+/* ---------- Rendering ---------- */
+function renderEmpty(name) {
+  $("cityName").textContent = name;
+  $("cards").innerHTML = POLLUTANTS.map((p, i) => cardHTML(p.label, "--", "No data", "#fff", "", i)).join("");
+}
+
+function cardHTML(label, value, rating, color, conc, i = 0) {
+  const idx = LEVEL_COLORS.indexOf(color);
+  const bg = idx >= 0 ? color : "var(--navy-line)";
+  const fg = idx >= 0 ? LEVEL_TEXT[idx] : "#9db4dd";
+  return `<div class="card" style="--i:${i}">
+    <div class="card-eyebrow">${label}</div>
+    <div class="card-num">${value}</div>
+    <span class="status-badge" style="background:${bg};color:${fg}"><span class="dot"></span>${rating}</span>
+    <div class="data-source-line">${conc || "&nbsp;"}</div>
+  </div>`;
+}
+
+function renderAir(name, entry) {
+  $("cityName").textContent = name;
+  const comps = entry.components;
+  $("cards").innerHTML = POLLUTANTS.map((p, i) => {
+    const conc = comps[p.comp];
+    const aqi = p.calc(conc);
+    const lvl = levelOf(aqi);
+    return cardHTML(p.label, aqi, LEVELS[lvl].text, LEVEL_COLORS[lvl], `${conc.toFixed(1)} ${p.unit}`, i);
+  }).join("");
+
+  const issued = new Date(entry.dt * 1000);
+  $("issued").textContent = `${name} Air Quality Report (Issued: ${issued.toLocaleString("en-US", {
+    month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit"
+  })})`;
+}
+
+function renderWeather(w) {
+  const pill = $("weatherPill");
+  const desc = w.weather?.[0]?.description || "";
+  pill.textContent = `${Math.round(w.main.temp)}°C · ${desc.charAt(0).toUpperCase() + desc.slice(1)} · Humidity ${w.main.humidity}% · Wind ${w.wind.speed} m/s`;
+  pill.hidden = false;
+}
+
+/* ---------- City search (OpenWeatherMap Geocoding) ---------- */
+async function search() {
+  const q = $("cityInput").value.trim();
+  if (!q) return;
+  if (!API_KEY || API_KEY.startsWith("YOUR_")) return setStatus("Search needs your OpenWeatherMap API key. Open index.html and set API_KEY near the top of the script.", true);
+  $("suggestions").hidden = true;
+  setStatus("Searching…");
+  try {
+    // City search through the OpenWeatherMap Geocoding API
+    const found = await getJSON(`${OWM}/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=5&appid=${API_KEY}`);
+    const results = found.map(r => ({
+      name: r.name, lat: r.lat, lon: r.lon,
+      label: [r.name, r.state, r.country].filter(Boolean).join(", ")
+    }));
+
+    if (!results.length) return setStatus("No matching city found. Try the city name only, e.g. \"Manila\".", true);
+    setStatus("");
+    const toPlace = (r) => ({ name: r.name, lat: r.lat, lon: r.lon });
+    // Load the best match right away; list the others as alternatives
+    loadPlace(toPlace(results[0]), true);
+    if (results.length === 1) return;
+    const ul = $("suggestions");
+    ul.innerHTML = "";
+    const head = document.createElement("li");
+    head.textContent = "Other matches:";
+    head.style.cssText = "font-size:.75rem;opacity:.7;cursor:default;";
+    head.onclick = (ev) => ev.stopPropagation();
+    ul.appendChild(head);
+    results.slice(1).forEach(r => {
+      const li = document.createElement("li");
+      li.textContent = r.label;
+      li.onclick = () => { ul.hidden = true; loadPlace(toPlace(r), true); };
+      ul.appendChild(li);
+    });
+    ul.hidden = false;
+  } catch (e) {
+    setStatus(e.message, true);
+  }
+}
+
+/* ---------- Suggestions while typing ---------- */
+let typeTimer = null;
+let suggestId = 0;
+
+async function suggest() {
+  const q = $("cityInput").value.trim();
+  const ul = $("suggestions");
+  if (q.length < 2) { ul.hidden = true; return; }
+  if (!API_KEY || API_KEY.startsWith("YOUR_")) return;
+  const id = ++suggestId;
+  try {
+    const found = await getJSON(`${OWM}/geo/1.0/direct?q=${encodeURIComponent(q)}&limit=5&appid=${API_KEY}`);
+    if (id !== suggestId) return;            // a newer keystroke replaced this request
+    ul.innerHTML = "";
+    const seen = new Set();
+    found.forEach(r => {
+      const label = [r.name, r.state, r.country].filter(Boolean).join(", ");
+      if (seen.has(label)) return;
+      seen.add(label);
+      const li = document.createElement("li");
+      li.textContent = label;
+      li.onclick = () => {
+        ul.hidden = true;
+        $("cityInput").value = r.name;
+        loadPlace({ name: r.name, lat: r.lat, lon: r.lon }, true);
+      };
+      ul.appendChild(li);
+    });
+    if (!ul.children.length) {
+      const li = document.createElement("li");
+      li.textContent = "No matching city";
+      li.style.cssText = "opacity:.7;cursor:default;";
+      ul.appendChild(li);
+    }
+    ul.hidden = false;
+  } catch (e) {
+    /* stay quiet while typing; pressing Search shows full error messages */
+  }
+}
+
+$("cityInput").addEventListener("input", () => {
+  clearTimeout(typeTimer);
+  typeTimer = setTimeout(suggest, 250);      // wait for a short pause in typing
+});
+$("cityInput").addEventListener("focus", () => { if ($("suggestions").children.length) suggest(); });
+
+$("searchBtn").addEventListener("click", () => { clearTimeout(typeTimer); suggestId++; search(); });
+$("cityInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { clearTimeout(typeTimer); suggestId++; search(); }
+  if (e.key === "Escape") $("suggestions").hidden = true;
+});
+document.addEventListener("click", (e) => { if (!e.target.closest(".search, #suggestions")) $("suggestions").hidden = true; });
+
+renderEmpty(DEFAULT_PLACE.name);
+loadPlace(DEFAULT_PLACE);
+</script>
+</body>
+</html>
